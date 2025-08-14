@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en" class="light"> <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Sentiment Analysis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        /* CSS Variables for Theming */
+        :root.light {
+            --bg-primary: #f3f4f6; /* gray-100 */
+            --bg-secondary: #ffffff; /* white */
+            --bg-tertiary: #f9fafb; /* gray-50 */
+            --text-primary: #1f2937; /* gray-800 */
+            --text-secondary: #6b7280; /* gray-500 */
+            --border-color: #d1d5db; /* gray-300 */
+            --accent-color: #3b82f6; /* blue-500 */
+        }
+        :root.dark {
+            --bg-primary: #111827; /* gray-900 */
+            --bg-secondary: #1f2937; /* gray-800 */
+            --bg-tertiary: #374151; /* gray-700 */
+            --text-primary: #f9fafb; /* gray-50 */
+            --text-secondary: #9ca3af; /* gray-400 */
+            --border-color: #4b5563; /* gray-600 */
+            --accent-color: #60a5fa; /* blue-400 */
+        }
+        :root.ocean {
+            --bg-primary: #E0F7FA;
+            --bg-secondary: #B2EBF2;
+            --bg-tertiary: #80DEEA;
+            --text-primary: #006064;
+            --text-secondary: #00838F;
+            --border-color: #4DD0E1;
+            --accent-color: #0097A7;
+        }
+
+        /* Applying theme variables */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+        }
+        .result-container, .textarea, .example-btn {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+        }
+        .textarea {
+            color: var(--text-primary);
+        }
+        .analyze-btn {
+            background-color: var(--accent-color);
+            color: var(--bg-secondary);
+        }
+        .text-muted {
+            color: var(--text-secondary);
+        }
+        .theme-btn.active {
+            box-shadow: 0 0 0 2px var(--accent-color);
+        }
+
+        /* Loader Animation */
+        .loader {
+            border: 4px solid var(--bg-tertiary);
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl mx-auto">
+        <div class="card p-6 md:p-8 rounded-2xl shadow-2xl">
+            
+            <div class="flex justify-between items-start mb-6">
+                <div class="text-left">
+                    <h1 class="text-3xl md:text-4xl font-bold">Sentiment Analysis</h1>
+                    <p class="text-muted mt-2">Analyze text to determine its emotional tone.</p>
+                </div>
+                <div id="theme-switcher" class="flex items-center space-x-2">
+                    <button data-theme="light" class="theme-btn active w-8 h-8 rounded-full bg-gray-200 border-2 border-white"></button>
+                    <button data-theme="dark" class="theme-btn w-8 h-8 rounded-full bg-gray-800 border-2 border-white"></button>
+                    <button data-theme="ocean" class="theme-btn w-8 h-8 rounded-full bg-cyan-100 border-2 border-white"></button>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <textarea id="text-input" rows="6" class="textarea w-full p-4 rounded-lg focus:ring-2 focus:ring-[var(--accent-color)] focus:border-[var(--accent-color)] transition" placeholder="Type or paste your text here..."></textarea>
+            </div>
+            
+            <div class="mb-6 flex flex-wrap gap-2">
+                <p class="w-full text-sm text-muted mb-1">Or try an example:</p>
+                <button class="example-btn text-sm py-1 px-3 rounded-md hover:bg-[var(--border-color)] transition">Positive</button>
+                <button class="example-btn text-sm py-1 px-3 rounded-md hover:bg-[var(--border-color)] transition">Neutral</button>
+                <button class="example-btn text-sm py-1 px-3 rounded-md hover:bg-[var(--border-color)] transition">Negative</button>
+            </div>
+
+
+            <div class="text-center mb-6">
+                <button id="analyze-btn" class="analyze-btn w-full sm:w-auto font-bold py-3 px-8 rounded-lg shadow-md hover:shadow-lg transition-all transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-opacity-50 focus:ring-[var(--accent-color)]">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-2"></i>Analyze Sentiment
+                </button>
+            </div>
+
+            <div id="result-container" class="result-container text-center p-6 rounded-lg" style="display: none;">
+                 <div id="loader" class="loader mx-auto" style="display: none;"></div>
+                 <div id="result-content" style="display: none;">
+                     <div id="sentiment-icon" class="text-5xl mb-3"></div>
+                     <p id="sentiment-label" class="text-2xl font-semibold"></p>
+                     
+                     <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2.5 my-4">
+                         <div id="sentiment-score-bar" class="h-2.5 rounded-full" style="width: 0%"></div>
+                     </div>
+                     <p id="sentiment-score" class="text-muted"></p>
+                 </div>
+            </div>
+            
+        </div>
+        <footer class="text-center mt-4">
+            <p class="text-muted text-sm">Powered by <a href="https://huggingface.co/docs/transformers.js/index" target="_blank" class="text-[var(--accent-color)] hover:underline">Hugging Face Transformers.js</a></p>
+        </footer>
+    </div>
+
+    <script type="module">
+        import { pipeline } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.1';
+
+        // --- DOM Elements ---
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const textInput = document.getElementById('text-input');
+        const resultContainer = document.getElementById('result-container');
+        const resultContent = document.getElementById('result-content');
+        const loader = document.getElementById('loader');
+        const sentimentIcon = document.getElementById('sentiment-icon');
+        const sentimentLabel = document.getElementById('sentiment-label');
+        const sentimentScore = document.getElementById('sentiment-score');
+        const sentimentScoreBar = document.getElementById('sentiment-score-bar');
+        const themeSwitcher = document.getElementById('theme-switcher');
+        
+        // --- Examples ---
+        const examples = {
+            Positive: "I'm so excited for the weekend! It's been a long week and I can't wait to relax.",
+            Neutral: "The package is scheduled to be delivered tomorrow between 9 AM and 5 PM.",
+            Negative: "I'm really disappointed with the customer service I received today. It was a terrible experience."
+        };
+        document.querySelectorAll('.example-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const sentiment = btn.textContent;
+                textInput.value = examples[sentiment];
+            });
+        });
+
+        // --- Theme Switcher Logic ---
+        themeSwitcher.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                const theme = e.target.dataset.theme;
+                document.documentElement.className = theme;
+                themeSwitcher.querySelector('.active').classList.remove('active');
+                e.target.classList.add('active');
+            }
+        });
+
+        // --- Model Initialization and Analysis ---
+        let analyser;
+        const MODEL_NAME = 'Xenova/twitter-roberta-base-sentiment-latest';
+
+        async function initializePipeline() {
+            setLoadingState(true, 'Loading Model...');
+            try {
+                // Initialize the sentiment analysis pipeline. 
+                // Using a model that supports positive, negative, and neutral labels.
+                analyser = await pipeline('sentiment-analysis', MODEL_NAME);
+            } catch (error) {
+                console.error("Failed to load model:", error);
+                showError("Could not load the AI model. Please refresh the page.");
+            } finally {
+                setLoadingState(false);
+            }
+        }
+
+        async function analyzeSentiment() {
+            const text = textInput.value;
+            if (!text.trim()) {
+                alert("Please enter some text to analyze.");
+                return;
+            }
+
+            setLoadingState(true);
+            resultContainer.style.display = 'block';
+            resultContent.style.display = 'none';
+
+            try {
+                const result = await analyser(text);
+                displayResult(result[0]);
+            } catch (error) {
+                console.error('Error during analysis:', error);
+                showError('Could not analyze the sentiment.');
+            } finally {
+                setLoadingState(false);
+            }
+        }
+        
+        // --- UI Helper Functions ---
+        function setLoadingState(isLoading, message = 'Analyze Sentiment') {
+            loader.style.display = isLoading ? 'block' : 'none';
+            analyzeBtn.disabled = isLoading;
+            if (isLoading && message !== 'Analyze Sentiment') {
+                analyzeBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-2"></i>${message}`;
+            } else {
+                 analyzeBtn.innerHTML = `<i class="fa-solid fa-wand-magic-sparkles mr-2"></i>${message}`;
+            }
+        }
+
+        function displayResult(sentiment) {
+            const { label, score } = sentiment;
+            const sentimentInfo = {
+                positive: { icon: '😊', color: 'bg-green-500', text: 'Positive' },
+                neutral: { icon: '😐', color: 'bg-yellow-500', text: 'Neutral' },
+                negative: { icon: '😠', color: 'bg-red-500', text: 'Negative' }
+            };
+
+            const info = sentimentInfo[label.toLowerCase()] || { icon: '🤔', color: 'bg-gray-500', text: 'Unknown' };
+
+            sentimentIcon.textContent = info.icon;
+            sentimentLabel.textContent = info.text;
+            sentimentScore.textContent = `Confidence Score: ${score.toFixed(4)}`;
+            
+            sentimentScoreBar.className = `h-2.5 rounded-full ${info.color}`;
+            sentimentScoreBar.style.width = `${score * 100}%`;
+
+            resultContent.style.display = 'block';
+        }
+
+        function showError(message) {
+            resultContainer.style.display = 'block';
+            resultContent.style.display = 'block';
+            sentimentIcon.textContent = '⚠️';
+            sentimentLabel.textContent = 'Error';
+            sentimentScore.textContent = message;
+            sentimentScoreBar.style.width = '0%';
+        }
+        
+        // --- Event Listeners and Initialization ---
+        analyzeBtn.addEventListener('click', analyzeSentiment);
+        initializePipeline();
+
+    </script>
+</body>
+</html>
